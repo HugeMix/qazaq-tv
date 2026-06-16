@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Qazaq TV — Казахстан</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d0f17;--panel:#131720;--card:#1c2030;--b:#252b3d;
+  --h:#1e2436;--acc:#4f8ef7;--live:#2dd55b;
+  --tx:#eef0f8;--sub:#7c8898;--dim:#3d4558;--red:#f04444;
+}
+
+/* ─── RESET / BASE ─── */
+html,body{height:100%;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+
+/* ─── HEADER ─── */
+.hdr{flex-shrink:0;height:54px;background:var(--panel);
+  border-bottom:1px solid var(--b);
+  display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo-sq{width:28px;height:28px;border-radius:7px;background:var(--acc);
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.logo-name{font-size:17px;font-weight:800;letter-spacing:-.4px;}
+.logo-name span{color:var(--acc);}
+.live-tag{display:flex;align-items:center;gap:5px;
+  background:rgba(45,213,91,.1);border:1px solid rgba(45,213,91,.25);
+  color:var(--live);padding:4px 11px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--live);
+  animation:pulse 1.8s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.85)}}
+
+/* ─── LAYOUT ─── */
+.wrap{flex:1;display:flex;overflow:hidden;min-height:0;}
+
+/* ─── SIDEBAR ─── */
+.side{width:290px;flex-shrink:0;background:var(--panel);
+  border-right:1px solid var(--b);
+  display:flex;flex-direction:column;overflow:hidden;}
+
+/* search */
+.srch{padding:11px;border-bottom:1px solid var(--b);flex-shrink:0;}
+.srch-box{position:relative;}
+.srch-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  color:var(--dim);pointer-events:none;}
+.srch-box input{width:100%;background:var(--card);border:1px solid var(--b);
+  color:var(--tx);padding:9px 11px 9px 32px;border-radius:9px;
+  font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
+.srch-box input::placeholder{color:var(--dim);}
+.srch-box input:focus{border-color:var(--acc);}
+
+/* cats */
+.cats{padding:9px 11px;border-bottom:1px solid var(--b);
+  display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0;}
+.ct{background:none;border:1px solid var(--b);color:var(--sub);
+  padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;
+  font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.ct:hover{border-color:var(--sub);color:var(--tx);}
+.ct.on{background:var(--acc);border-color:var(--acc);color:#fff;}
+
+/* channel list */
+.clist{flex:1;overflow-y:auto;padding:5px;}
+.clist::-webkit-scrollbar{width:3px;}
+.clist::-webkit-scrollbar-thumb{background:var(--b);border-radius:3px;}
+.crow{display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:9px;cursor:pointer;
+  border:1px solid transparent;transition:background .12s;margin-bottom:1px;}
+.crow:hover{background:var(--h);}
+.crow.on{background:rgba(79,142,247,.12);border-color:rgba(79,142,247,.35);}
+.crow:active{transform:scale(.98);}
+.cico{width:38px;height:38px;border-radius:8px;background:var(--card);
+  border:1px solid var(--b);overflow:hidden;display:flex;
+  align-items:center;justify-content:center;flex-shrink:0;}
+.cico img{width:100%;height:100%;object-fit:contain;padding:3px;}
+.cico .ab{font-size:8px;font-weight:700;color:var(--acc);
+  text-align:center;line-height:1.2;padding:2px;}
+.cmeta{flex:1;min-width:0;}
+.cnm{font-size:13px;font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cct{font-size:10px;color:var(--dim);margin-top:2px;}
+.cst{width:6px;height:6px;border-radius:50%;
+  background:var(--b);flex-shrink:0;transition:background .3s;}
+.cst.ok{background:var(--live);}
+.cst.er{background:var(--red);}
+.cempty{padding:24px 12px;text-align:center;color:var(--dim);font-size:12px;}
+
+/* ─── MAIN ─── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* video */
+.vwrap{position:relative;background:#000;flex-shrink:0;}
+.vratio{position:relative;width:100%;padding-top:56.25%;}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;}
+
+/* overlay */
+.ovr{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;background:rgba(0,0,0,.72);z-index:2;
+  transition:opacity .2s;}
+.ovr.off{opacity:0;pointer-events:none;}
+.wlc{text-align:center;user-select:none;}
+.wico{font-size:50px;display:block;margin-bottom:14px;opacity:.18;}
+.wlc h2{font-size:16px;font-weight:600;color:rgba(255,255,255,.28);margin-bottom:6px;}
+.wlc p{font-size:12px;color:rgba(255,255,255,.15);}
+.spin{width:40px;height:40px;border:3px solid rgba(255,255,255,.08);
+  border-top-color:var(--acc);border-radius:50%;animation:sp .75s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.emsg{text-align:center;}
+.emsg .ei{font-size:36px;display:block;margin-bottom:10px;}
+.emsg h3{font-size:13px;margin-bottom:5px;}
+.emsg h3.red{color:var(--red);}
+.emsg p{font-size:11px;color:rgba(255,255,255,.25);max-width:210px;margin:0 auto;line-height:1.6;}
+.emsg button{margin-top:12px;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);color:#fff;
+  padding:7px 18px;border-radius:8px;font-size:12px;
+  cursor:pointer;font-family:inherit;transition:background .15s;}
+.emsg button:hover{background:rgba(255,255,255,.18);}
+.emsg .playbtn{background:var(--acc);border-color:var(--acc);font-weight:600;}
+.emsg .playbtn:hover{background:#3a7de6;}
+
+/* fs hint */
+.fs-hint{position:absolute;top:8px;right:8px;z-index:3;
+  opacity:0;transition:opacity .2s;}
+.vwrap:hover .fs-hint,.vwrap:focus-within .fs-hint{opacity:1;}
+.fsbtn{width:32px;height:32px;background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.85);
+  border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.fsbtn:hover{background:rgba(0,0,0,.85);color:#fff;}
+
+/* ─── NOW BAR ─── */
+.nowbar{background:var(--panel);border-top:1px solid var(--b);
+  padding:9px 14px;display:flex;align-items:center;gap:11px;flex-shrink:0;}
+.nowbar.h{display:none;}
+.nlogo{width:36px;height:36px;border-radius:7px;background:var(--card);
+  border:1px solid var(--b);overflow:hidden;display:flex;
+  align-items:center;justify-content:center;flex-shrink:0;}
+.nlogo img{width:100%;height:100%;object-fit:contain;padding:3px;}
+.ninf{flex:1;min-width:0;}
+.nnm{font-size:13px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nsb{font-size:10px;color:var(--sub);margin-top:2px;}
+.ctrls{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.cbtn{width:32px;height:32px;background:var(--card);border:1px solid var(--b);
+  color:var(--tx);border-radius:7px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;flex-shrink:0;}
+.cbtn:hover{background:var(--acc);border-color:var(--acc);}
+.cbtn:active{transform:scale(.92);}
+.vgrp{display:flex;align-items:center;gap:5px;}
+input[type=range].vol{
+  -webkit-appearance:none;appearance:none;
+  width:76px;height:3px;background:var(--b);border-radius:3px;
+  outline:none;cursor:pointer;}
+input[type=range].vol::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;
+  border-radius:50%;background:var(--acc);cursor:pointer;}
+input[type=range].vol::-moz-range-thumb{
+  width:13px;height:13px;border-radius:50%;
+  background:var(--acc);border:none;cursor:pointer;}
+
+/* ─── BOTTOM (related) ─── */
+.bot{flex:1;overflow-y:auto;padding:14px;background:var(--bg);}
+.bot::-webkit-scrollbar{width:3px;}
+.bot::-webkit-scrollbar-thumb{background:var(--b);border-radius:3px;}
+.bot-empty{height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;gap:9px;color:var(--dim);}
+.bot-empty .eico{font-size:38px;}
+.bot-empty h3{font-size:13px;color:var(--sub);}
+.bot-empty p{font-size:11px;line-height:1.75;max-width:260px;}
+.rlbl{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--dim);margin-bottom:9px;}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:7px;}
+.rc{background:var(--panel);border:1px solid var(--b);border-radius:9px;
+  padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;}
+.rc:hover{border-color:var(--acc);background:rgba(79,142,247,.07);transform:translateY(-1px);}
+.rc:active{transform:scale(.96);}
+.rcico{width:38px;height:38px;border-radius:8px;background:var(--card);
+  border:1px solid var(--b);margin:0 auto 7px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;}
+.rcico img{width:100%;height:100%;object-fit:contain;padding:3px;}
+.rcnm{font-size:10px;font-weight:500;line-height:1.3;color:var(--tx);}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;bottom:18px;left:50%;
+  transform:translateX(-50%) translateY(64px);
+  background:var(--panel);border:1px solid var(--b);color:var(--tx);
+  padding:9px 18px;border-radius:9px;font-size:12px;font-weight:500;
+  z-index:999;transition:transform .28s cubic-bezier(.34,1.56,.64,1);
+  pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ─── LOADING ─── */
+.loading{position:fixed;inset:0;background:var(--bg);z-index:100;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:13px;}
+.loading p{font-size:12px;color:var(--sub);}
+.loading.off{display:none;}
+
+/* ─── MOBILE ≤680px ─── */
+@media(max-width:680px){
+  body{overflow:auto;height:auto;min-height:100dvh;}
+  .wrap{flex-direction:column;overflow:visible;}
+  .side{width:100%;border-right:none;border-bottom:1px solid var(--b);}
+  .clist{max-height:200px;}
+  .main{overflow:visible;}
+  .bot{overflow:visible;}
+  .vgrp{display:none;}           /* громкость убрана на мобиле — там системная */
+  .fs-hint{opacity:1;}           /* кнопка FS всегда видна */
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading" id="ld">
+  <div class="spin" style="width:46px;height:46px;border-width:3px;"></div>
+  <div style="font-size:16px;font-weight:800;">Qazaq<span style="color:var(--acc)">TV</span></div>
+  <p>Загружаем каналы…</p>
+</div>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo">
+    <div class="logo-sq">📺</div>
+    <div class="logo-name">Qazaq<span>TV</span></div>
+  </div>
+  <div class="live-tag"><div class="live-dot"></div>Прямой эфир</div>
+</header>
+
+<div class="wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="srch">
+      <div class="srch-box">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="si" type="search" placeholder="Поиск каналов…" autocomplete="off" oninput="doFilter()">
+      </div>
+    </div>
+    <div class="cats" id="cats"></div>
+    <div class="clist" id="clist"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- PLAYER -->
+    <div class="vwrap">
+      <div class="vratio">
+        <video id="vid" playsinline></video>
+        <div class="ovr" id="ovr">
+          <div class="wlc">
+            <span class="wico">📺</span>
+            <h2>Выберите канал</h2>
+            <p>Нажмите на любой канал в списке</p>
+          </div>
+        </div>
+        <div class="fs-hint">
+          <button class="fsbtn" onclick="doFS()" title="Полный экран">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOW PLAYING -->
+    <div class="nowbar h" id="nb">
+      <div class="nlogo" id="nLogo"></div>
+      <div class="ninf">
+        <div class="nnm" id="nName">—</div>
+        <div class="nsb" id="nSub">Прямой эфир</div>
+      </div>
+      <div class="ctrls">
+        <div class="vgrp">
+          <button class="cbtn" id="mBtn" onclick="toggleMute()">
+            <svg id="vIco" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </button>
+          <input type="range" class="vol" id="vol" min="0" max="100" value="90" oninput="setVol(this.value)">
+        </div>
+        <button class="cbtn" onclick="reloadCh()" title="Перезагрузить">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+        </button>
+        <button class="cbtn" onclick="doFS()" title="Полный экран">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- RELATED -->
+    <div class="bot" id="bot">
+      <div class="bot-empty">
+        <div class="eico">🇰🇿</div>
+        <h3>Казахстанское ТВ бесплатно</h3>
+        <p>Выберите канал слева — трансляция начнётся сразу. Некоторые каналы доступны только в Казахстане.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── LOGOS ──
+var L = 'https://raw.githubusercontent.com/aidoseg/qazaqiptv/main/';
+
+// ── КАНАЛЫ — только проверенные URL из iptv-org/iptv ──
+// sc.id-tv.kz, streams.adapto.kz, tvcdn01.oktv.kz, stream.kaztrk.kz — реально работающие CDN
+var CHANNELS = [
+  // НАЦКАНАЛЫ
+  {id:'c0', name:'31 Канал',           cat:'Нацканалы',    logo:L+'31-kanal-kz.png',       url:'https://streams.adapto.kz/hls/live/31kz/main_stream.m3u8'},
+  {id:'c1', name:'7 Канал',            cat:'Нацканалы',    logo:L+'7kanal-kz.png',         url:'https://sc.id-tv.kz/7_kanal.m3u8'},
+  {id:'c2', name:'Хабар 24',           cat:'Новости',      logo:L+'xabar24.png',           url:'https://tvcdn01.oktv.kz/tv/24kz/index.m3u8'},
+  {id:'c3', name:'Balapan TV',         cat:'Детские',      logo:L+'balapan.png',           url:'https://balapantv-stream.qazcdn.com/balapantv/balapantv/playlist.m3u8'},
+  {id:'c4', name:'Abai TV',            cat:'Регионы',      logo:L+'abaitv.png',            url:'https://abaitv-stream.qazcdn.com/abaitv/abaitv/playlist.m3u8'},
+  {id:'c5', name:'Atameken Business',  cat:'Бизнес',       logo:L+'atameken-business.png', url:'https://live-atameken.cdnvideo.ru/atameken/atameken_hq.sdp/playlist.m3u8'},
+  {id:'c6', name:'MuzzOne',            cat:'Музыка',       logo:L+'muzzone.png',           url:'https://streams.adapto.kz/hls/live/muzzone/main_stream.m3u8'},
+  {id:'c7', name:'Alau TV',            cat:'Регионы',      logo:'',                        url:'https://otv.wotom.net/alau/stream.m3u8'},
+
+  // РЕГИОНЫ через stream.kaztrk.kz
+  {id:'c8', name:'Aqjaiyq',            cat:'Регионы',      logo:L+'aqjaiyq.png',           url:'https://stream.kaztrk.kz/regional/oraltv/index.m3u8'},
+  {id:'c9', name:'Aqtóbe',             cat:'Регионы',      logo:L+'aqtobe.png',            url:'https://stream.kaztrk.kz/regional/aktobetv/index.m3u8'},
+  {id:'c10',name:'Atyraý',             cat:'Регионы',      logo:L+'atyray.png',            url:'https://stream.kaztrk.kz/regional/atyrautv/index.m3u8'},
+  {id:'c11',name:'Ertis',              cat:'Регионы',      logo:L+'ertis.png',             url:'https://stream.kaztrk.kz/regional/semeytv/index.m3u8'},
+  {id:'c12',name:'Jambyl',             cat:'Регионы',      logo:L+'jambyl-kz.png',         url:'https://stream.kaztrk.kz/regional/taraztv/index.m3u8'},
+  {id:'c13',name:'Kókshe',             cat:'Регионы',      logo:L+'kokshe.png',            url:'https://stream.kaztrk.kz/regional/kokshetautv/index.m3u8'},
+  {id:'c14',name:'Mańǵystaý',          cat:'Регионы',      logo:L+'mangystay.png',         url:'https://stream.kaztrk.kz/regional/mangystautv/index.m3u8'},
+  {id:'c15',name:'Ontústik',           cat:'Регионы',      logo:L+'ontustik.png',          url:'https://stream.kaztrk.kz/regional/shymkenttv/index.m3u8'},
+  {id:'c16',name:'Pavlodar',           cat:'Регионы',      logo:'',                        url:'https://stream.kaztrk.kz/regional/pavlodartv/index.m3u8'},
+  {id:'c17',name:'Saryarqa',           cat:'Регионы',      logo:L+'saryarqa.png',          url:'https://stream.kaztrk.kz/regional/saryarqatv/index.m3u8'},
+  {id:'c18',name:'Mangystay',          cat:'Регионы',      logo:L+'mangystay.png',         url:'https://stream.kaztrk.kz/regional/mangystautv/index.m3u8'},
+  {id:'c19',name:'Qostanay',           cat:'Регионы',      logo:L+'qostanai-kz.png',       url:'https://stream.kaztrk.kz/regional/qostanaytv/index.m3u8'},
+  {id:'c20',name:'Qyzylorda',          cat:'Регионы',      logo:L+'qyzylorda-kz.png',      url:'https://stream.kaztrk.kz/regional/qyzylordatv/index.m3u8'},
+];
+
+var activeCat = 'Все', curCh = null, hlsObj = null, muted = false;
+
+// ── BOOT ──
+document.getElementById('ld').classList.add('off');
+buildCats();
+renderList(CHANNELS);
+
+// ── CATEGORIES ──
+function buildCats() {
+  var seen = {}, cats = ['Все'];
+  CHANNELS.forEach(function(c) { if (!seen[c.cat]) { seen[c.cat] = true; cats.push(c.cat); } });
+  var el = document.getElementById('cats');
+  el.innerHTML = '';
+  cats.forEach(function(cat) {
+    var b = document.createElement('button');
+    b.className = 'ct' + (cat === 'Все' ? ' on' : '');
+    b.textContent = cat;
+    b.onclick = function() {
+      activeCat = cat;
+      document.querySelectorAll('.ct').forEach(function(x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      doFilter();
+    };
+    el.appendChild(b);
+  });
+}
+
+// ── FILTER ──
+function doFilter() {
+  var q = document.getElementById('si').value.toLowerCase().trim();
+  var list = CHANNELS.filter(function(c) {
+    return (activeCat === 'Все' || c.cat === activeCat)
+        && (q === '' || c.name.toLowerCase().indexOf(q) !== -1);
+  });
+  renderList(list);
+}
+
+// ── RENDER LIST ──
+function renderList(list) {
+  var el = document.getElementById('clist');
+  el.innerHTML = '';
+  if (!list.length) {
+    el.innerHTML = '<div class="cempty">Ничего не найдено</div>';
+    return;
+  }
+  list.forEach(function(ch) {
+    var row = document.createElement('div');
+    row.className = 'crow' + (curCh && curCh.id === ch.id ? ' on' : '');
+    row.id = 'r-' + ch.id;
+    var lg = ch.logo
+      ? '<img src="' + xe(ch.logo) + '" alt="' + xe(ch.name) + '" onerror="this.style.display=\'none\'">'
+      : '<div class="ab">' + xe(ch.name.substring(0, 5)) + '</div>';
+    row.innerHTML =
+      '<div class="cico">' + lg + '</div>' +
+      '<div class="cmeta">' +
+        '<div class="cnm">' + xe(ch.name) + '</div>' +
+        '<div class="cct">' + xe(ch.cat) + '</div>' +
+      '</div>' +
+      '<div class="cst" id="st-' + ch.id + '"></div>';
+    row.onclick = function() { play(ch); };
+    el.appendChild(row);
+  });
+}
+
+// ── PLAY ──
+function play(ch) {
+  curCh = ch;
+
+  // highlight
+  document.querySelectorAll('.crow').forEach(function(r) { r.classList.remove('on'); });
+  var row = document.getElementById('r-' + ch.id);
+  if (row) { row.classList.add('on'); row.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+
+  // now bar
+  document.getElementById('nb').classList.remove('h');
+  document.getElementById('nName').textContent = ch.name;
+  document.getElementById('nSub').textContent = ch.cat + '\u00a0·\u00a0Прямой эфир';
+  var nl = document.getElementById('nLogo');
+  nl.innerHTML = ch.logo
+    ? '<img src="' + xe(ch.logo) + '" style="width:100%;height:100%;object-fit:contain;padding:3px;" onerror="this.style.display=\'none\'">'
+    : '';
+
+  setOvr('load');
+  renderRelated(ch);
+
+  // destroy old
+  if (hlsObj) { hlsObj.destroy(); hlsObj = null; }
+  var vid = document.getElementById('vid');
+  vid.pause();
+  vid.removeAttribute('src');
+  vid.load();
+  vid.volume = document.getElementById('vol').value / 100;
+  vid.muted = muted;
+
+  // start
+  if (window.Hls && Hls.isSupported()) {
+    var h = new Hls({ enableWorker: true, lowLatencyMode: true, backBufferLength: 30 });
+    hlsObj = h;
+    h.loadSource(ch.url);
+    h.attachMedia(vid);
+    h.on(Hls.Events.MANIFEST_PARSED, function() {
+      vid.play()
+        .then(function() { setOvr('off'); setSt(ch.id, 'ok'); doToast('▶\u00a0' + ch.name); })
+        .catch(function() { setOvr('click'); });
+    });
+    h.on(Hls.Events.ERROR, function(ev, d) {
+      if (d.fatal) { setSt(ch.id, 'er'); setOvr('err'); }
+    });
+  } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+    vid.src = ch.url;
+    vid.play()
+      .then(function() { setOvr('off'); setSt(ch.id, 'ok'); })
+      .catch(function() { setOvr('click'); });
+  } else {
+    setOvr('nosup');
+  }
+}
+
+// ── OVERLAY ──
+function setOvr(s) {
+  var o = document.getElementById('ovr');
+  if (s === 'off') { o.classList.add('off'); return; }
+  o.classList.remove('off');
+  if (s === 'load') {
+    o.innerHTML = '<div class="spin"></div>';
+  } else if (s === 'err') {
+    o.innerHTML = '<div class="emsg"><span class="ei">📡</span>'
+      + '<h3 class="red">Нет сигнала</h3>'
+      + '<p>Канал недоступен в вашем регионе или временно не работает</p>'
+      + '<button onclick="reloadCh()">Попробовать снова</button></div>';
+  } else if (s === 'click') {
+    o.innerHTML = '<div class="emsg"><span class="ei" style="font-size:42px">▶</span>'
+      + '<h3>Нажмите для воспроизведения</h3>'
+      + '<p>Браузер заблокировал автозапуск</p>'
+      + '<button class="playbtn" onclick="forcePlay()">Смотреть</button></div>';
+  } else if (s === 'nosup') {
+    o.innerHTML = '<div class="emsg"><span class="ei">⚠️</span>'
+      + '<h3>Браузер не поддерживает</h3>'
+      + '<p>Используйте Chrome или Safari</p></div>';
+  }
+}
+
+function forcePlay() {
+  var v = document.getElementById('vid');
+  v.play().then(function() { setOvr('off'); }).catch(function() {});
+}
+function reloadCh() { if (curCh) play(curCh); }
+
+// ── RELATED ──
+function renderRelated(ch) {
+  var rel = CHANNELS.filter(function(c) { return c.cat === ch.cat && c.id !== ch.id; }).slice(0, 12);
+  var bp = document.getElementById('bot');
+  if (!rel.length) { bp.innerHTML = ''; return; }
+  var html = '<div class="rlbl">Ещё каналы: ' + xe(ch.cat) + '</div><div class="rgrid">';
+  rel.forEach(function(rc) {
+    var lg = rc.logo ? '<img src="' + xe(rc.logo) + '" alt="' + xe(rc.name) + '" onerror="this.style.display=\'none\'">' : '';
+    html += '<div class="rc" data-id="' + rc.id + '">'
+      + '<div class="rcico">' + lg + '</div>'
+      + '<div class="rcnm">' + xe(rc.name) + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  bp.innerHTML = html;
+  bp.querySelectorAll('.rc').forEach(function(card) {
+    card.onclick = function() {
+      var id = card.getAttribute('data-id');
+      for (var i = 0; i < CHANNELS.length; i++) {
+        if (CHANNELS[i].id === id) { play(CHANNELS[i]); break; }
+      }
+    };
+  });
+}
+
+// ── CONTROLS ──
+function toggleMute() {
+  muted = !muted;
+  document.getElementById('vid').muted = muted;
+  var ico = document.getElementById('vIco');
+  ico.innerHTML = muted
+    ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'
+    : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+}
+function setVol(v) {
+  document.getElementById('vid').volume = v / 100;
+  if (+v === 0 && !muted) toggleMute();
+  else if (+v > 0 && muted) toggleMute();
+}
+function doFS() {
+  var v = document.getElementById('vid');
+  if (!document.fullscreenElement) v.requestFullscreen().catch(function() {});
+  else document.exitFullscreen();
+}
+function setSt(id, s) {
+  var el = document.getElementById('st-' + id);
+  if (el) el.className = 'cst' + (s ? ' ' + s : '');
+}
+function doToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2400);
+}
+function xe(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
